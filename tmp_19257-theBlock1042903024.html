@@ -1,0 +1,314 @@
+﻿<DOCUMENT !html>
+<html>
+<head>
+<title>the Block</title>
+<style>
+html {
+  overflow: hidden;
+  background-color: black;
+}
+#wallDiv {
+  background-color: grey;
+  position:  absolute;
+  width: 70px;
+  height: 70px;
+}
+#sign {
+  background-color: #DDDD99;
+  position:  absolute;
+  width: 70px;
+  height: 70px;
+  font-size: 10px;
+}
+#portalDiv {
+  background-color: blue;
+  position: absolute;
+  width: 70px;
+  height: 70px;
+}
+#mainRoom {
+  background-color: white;
+  position: absolute;
+}
+#mainLevel {
+  position:absolute;
+}
+#title {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+</style>
+</head>
+<body>
+<div id="viewport">
+<div id="mainRoom">
+<div id = "mainLevel"></div>
+<div id="player" style="background-color: red; position: absolute; width:70px; height: 70px; left:70px; top:70px;"></div>
+</div>
+<div id="title"></div>
+</div>
+</div>
+<script>
+var viewPort = document.getElementById("viewport");
+var player = document.getElementById("player");
+var room1 = document.getElementById("mainRoom");
+var levelDiv = document.getElementById("mainLevel");
+
+var titleDiv = document.getElementById("title");
+titleDiv.style.backgroundColor = "rgba(0,0,0,0)"
+var initialJump = true;
+var titleTimer = 0;
+
+var lastTouch = [];
+var playerObj = {
+  x: 0,
+  y: 0,
+  yVel: 0,
+  spawnX: 0,
+  spawnY: 0
+};
+
+var canGo = {
+  left: true,
+  right: true
+};
+var currentLevel = -1;
+var scene1 = [
+ 9,
+ "##########################",
+ "#------------------------#",
+ "#------------------------#",
+ "#------------------------#",
+ "#------------------------#",
+ "#---=------------------=-#",
+ "#-$--------------------@-#",
+ "#######---####---#########",
+ "Pitfall"
+];
+
+var levels = [
+[8,//the index of the last line of the level.
+"#########################",
+"#-----------------------#",
+"#-----------------------#",
+"#-----##########--------#",
+"#---=-#--------#--------#",
+"#--$--#--------#------@-#", 
+"#########################",//# - wall; $ - start position; @ - exit; - - empty space;
+"Up and Over"// name of the level
+],
+[10,
+"######",
+"#----#",
+"#-##-#",
+"#--#-#",
+"##-#-#",
+"#--#-#",
+"#-##-#",
+"#-$#@#",
+"######",
+"Tight Escape"
+],
+[9,
+"#############",
+"#--#----#---#",
+"#--#----#---#",
+"#--#--------#",
+"#-------#---#",
+"#--#----#---#",
+"#$-#----#--@#",
+"#############",
+"Wall Gaps"
+],
+[4,
+"#######################",
+"#$-=-----------------@#",
+"####-#-#-#-#-#-#-#-####",
+"Skipping holes"
+],
+[8,
+"#######################" ,
+"#---------------------#",
+"#---------------------#",
+"#---------------------#",
+"#---------------------#",
+"#$-----------------@--#",
+"########--------#######",
+"The Fling"
+],
+[4,
+"#######",
+"#$-=-=#",
+"#######",
+"The End"
+]
+];
+var signs1 = [
+ ["tap the left and right edges of the screen to move, and tap the top to jump!","jump into this portal to go to the next level!"],
+ ["It's a high jump, but I think you might just be able to make it..."],
+ [],
+ [],
+ ["the more fingers you use to run, the faster you go!"],
+ [],
+ ["Congrats! You have, for all intents and purposes, won this game!", "I probably will be making more levels, but for now this is all there is."]
+];
+var timer = 0;
+drawScene(scene1);
+var interval = window.setInterval(mainLoop,17);
+function drawScene(scene){
+  var lineIndex = 1;
+  mainLevel.innerHTML = "";
+  var signIndex = 0;
+  for(var y = 1; y < scene[0]; y++){
+    for(var x = 0; x < scene[lineIndex].length; x++){
+      switch(scene[lineIndex][x])
+      {
+        case "#":
+          var newDiv = document.createElement("DIV");
+          mainLevel.appendChild(newDiv);
+          newDiv.id = "wallDiv";
+          newDiv.style.left = (70*x).toString()+"px";
+          newDiv.style.top = (70*lineIndex-70).toString()+"px";
+          break;
+        case "$":
+          playerObj.yVel = -5;
+          playerObj.x = x*70;
+          playerObj.y = lineIndex*70-70;
+          playerObj.spawnX = playerObj.x;
+          playerObj.spawnY = playerObj.y;
+          break;
+        case "@":
+          var newDiv = document.createElement("DIV");
+          mainLevel.appendChild(newDiv);
+          newDiv.id = "portalDiv";
+          newDiv.style.left = (70*x).toString()+"px";
+          newDiv.style.top = (70*lineIndex-70).toString()+"px";
+          break;
+        case "=":
+          var newDiv = document.createElement("DIV");
+          mainLevel.appendChild(newDiv);
+          newDiv.id = "sign";
+          newDiv.style.left = (70*x).toString()+"px";
+          newDiv.style.top = (70*lineIndex-70).toString()+"px";
+          newDiv.innerHTML = signs1[currentLevel+1][signIndex];
+          signIndex++;
+          break;
+      }
+    }
+    lineIndex++;
+  }
+  titleTimer = 0;
+  titleDiv.innerHTML = "<h2>"+scene[lineIndex]+"</h2>";
+  titleDiv.style.color = "rgba(255,255,255,255)";
+  titleDiv.style.backgroundColor = "rgba(0,0,0,0.8)";
+}
+
+function mainLoop(){
+  titleDiv.style.width = window.innerWidth.toString()+"px";
+  player.style.top = playerObj.y.toString()+"px";
+  player.style.left = playerObj.x.toString()+"px";
+  room1.style.top = (Math.floor(0-(playerObj.y-window.innerHeight/2 + 35))).toString()+"px";
+  room1.style.left = (Math.floor(0-(playerObj.x - window.innerWidth/2 + 35))).toString()+"px";
+  canGo.left = true;
+  canGo.right = true;
+  titleTimer++;
+  if(titleTimer > 120){
+    titleDiv.style.color = "rgba(255,255,255,"+(1-((titleTimer-120)/60))+")";
+    titleDiv.style.backgroundColor = "rgba(0,0,0,"+(0.8-((titleTimer-120)/48))+")";
+  }
+  if(Math.round(playerObj.y/70)+2 < scene1[0] && Math.round(playerObj.y/70) > 0){
+    if(scene1[Math.floor(playerObj.y/70)+2][Math.round(playerObj.x/70)] == "#"){
+      playerObj.y = Math.floor(playerObj.y/70)*70;
+      playerObj.yVel = 0;       initialJump = true;
+    }
+    else if(scene1[Math.ceil(playerObj.y/70)][Math.round(playerObj.x/70)] == "#"){
+      playerObj.y = Math.ceil(playerObj.y/70)*70+7;
+      playerObj.yVel = 1;
+    }
+    else
+    {
+      playerObj.yVel += 1;
+      playerObj.y += playerObj.yVel;
+    }
+    if(Math.round(playerObj.x/70) > 0 && Math.round(playerObj.x/70) < scene1[Math.round(playerObj.y/70)+1].length && scene1[Math.round(playerObj.y/70)+1][Math.ceil(playerObj.x/70)-1] == "#"){
+      canGo.left = false;
+      playerObj.x = Math.ceil(playerObj.x/70)*70;
+    }
+    if(scene1[Math.round(playerObj.y/70)+1][Math.floor(playerObj.x/70)+1] == "#"){
+      canGo.right = false;
+      playerObj.x = Math.floor(playerObj.x/70)*70;
+    }
+    if(scene1[Math.round(playerObj.y/70)+1][Math.floor(playerObj.x/70)] == "@"){
+      currentLevel++;
+      scene1 = levels[currentLevel];
+      drawScene(scene1);
+    }
+  }
+  else
+  {
+    playerObj.yVel += 1;
+    playerObj.y += playerObj.yVel;
+  }
+  if(Math.floor(playerObj.y/70)+2 >= scene1[0]+4){
+    playerObj.y = playerObj.spawnY;
+    playerObj.x = playerObj.spawnX;
+  }
+  var jumpedOnce = false;
+  if(lastTouch.length > 0) {
+    for(var i = 0; i < lastTouch.length; i++){
+      if(lastTouch[i].x < window.innerWidth/4&&canGo.left){
+        playerObj.x -= 7;
+      }
+      else if(lastTouch[i].x > (window.innerWidth/4)*3&&canGo.right)
+      {
+        playerObj.x += 7;
+      }
+      if(lastTouch[i].y < (window.innerHeight/4))
+      {
+        if(initialJump){
+          playerObj.y -= 5;
+          playerObj.yVel = -20;
+          initialJump = false;
+        }
+      }
+    }
+  }
+}
+
+window.addEventListener("touchstart", function(e){
+  lastTouch = [];
+  for(var i = 0; i < e.touches.length; i++){
+    lastTouch[i] = {
+      x: e.touches[i].clientX,
+      y: e.touches[i].clientY
+    };
+  }
+  //player.innerHTML = e.touches[0].clientX;
+  e.preventDefault();
+});
+
+window.addEventListener("touchmove", function(e){
+  lastTouch = [];
+  for(var i = 0; i < e.touches.length; i++){
+    lastTouch[i] = {
+      x: e.touches[i].clientX,
+      y: e.touches[i].clientY
+    };
+  }
+  e.preventDefault();
+});
+
+window.addEventListener("touchend", function(e){
+  lastTouch = [];
+  for(var i = 0; i < e.touches.length; i++){
+    lastTouch[i] = {
+      x: e.touches[i].clientX,
+      y: e.touches[i].clientY
+    };
+  }
+  e.preventDefault()
+});
+</script>
+</body>
+</html>
